@@ -37,7 +37,7 @@ public class DocumentVector {
             BufferedReader bufferedReader;
             String inputLine;
             try {
-                Path path = new Path("/user/hadoop/docFreqOrder0.0/part-r-00000");
+                Path path = new Path("path to the output of DocumentFrequencyOrdering Reduce2");
                 FileSystem fs = FileSystem.get(new Configuration());
                 bufferedReader = new BufferedReader(new InputStreamReader(fs.open(path)));
                 int index = 1;
