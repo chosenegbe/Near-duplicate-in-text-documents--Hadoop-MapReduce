@@ -1,0 +1,147 @@
+package Main;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.*;
+import java.util.*;
+
+public class DocumentVector {
+
+
+    //static ReaderClasstest reader = new ReaderClasstest();
+    public static class Map extends Mapper<LongWritable, Text, Text, Text>{
+
+        private static final IntWritable one = new IntWritable(1);
+        private Text fileVal = new Text();
+        /*
+        * Initialize the hashTable. Each word in the DocumentFrequencyOrdering is given a hash value based on its location
+        * in the file. With the first word having a value of 1. So we have a hash table in the form
+        * [A,1] [B, 2] [C, 3] [D, 4] ...
+        *
+        * */
+        public Hashtable<String, Integer> hashTableInit( ){
+            Hashtable<String, Integer> hashtable = new Hashtable<>();
+            BufferedReader bufferedReader;
+            String inputLine;
+            try{
+                Path path=new Path("/user/hadoop/docFreqOrder0.5/part-r-00000");
+                FileSystem fs = FileSystem.get(new Configuration());
+                bufferedReader = new BufferedReader(new InputStreamReader(fs.open(path)));
+                int index = 1;
+                inputLine = bufferedReader.readLine();
+                while(inputLine != null){
+                    //System.out.println(inputLine + "hell0 World");
+                    hashtable.put(inputLine,index);
+                    inputLine = bufferedReader.readLine();
+                    index++;
+
+                }
+            }catch (Exception e){
+                System.out.println(e.getStackTrace());
+            }
+            return hashtable;
+        }
+        @Override
+        public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException{
+
+            FileSplit fileSplit = ((FileSplit) context.getInputSplit());
+            String fileName = fileSplit.getPath().getName();
+            fileVal.set(fileName);
+
+            String line = value.toString();
+            StringTokenizer tokenizer = new StringTokenizer(line);
+            //System.out.println(reader.hashTableInit());
+            //Text vectorText = new Text();
+            StringBuilder valueBuilder = new StringBuilder();
+            while (tokenizer.hasMoreTokens()) {
+
+                String word = tokenizer.nextToken();
+                int hashValue = hashTableInit().get(word);
+                valueBuilder.append(one);
+                valueBuilder.append("@");
+                valueBuilder.append(hashValue);
+
+                context.write(fileVal, new Text(one + "@" + hashValue));
+            }
+        }
+    }
+
+    public static class Reduce extends Reducer<Text, Text, Text, NullWritable>{
+        IntWritable result = new IntWritable();
+
+        @Override
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException{
+            int sum = 0;
+
+
+            List<Integer> LList = new LinkedList<>();
+            String newText = "";
+            String tmpText = "";
+            for (Text word: values){
+                String[] wordValue = word.toString().split("@");
+                int hashValue = Integer.parseInt(wordValue[1]);
+
+                /*wordValue[1] is the hashValue of the word in the DocumentFrequency hash table
+                *  wordValue[0] is the IntWritable value of 1 for any word in the  in the document
+
+                *  We want the hashValue of each word in the document. This hashValue is based on the DocumentFrequency hash table
+                *  We used a List to store the hashValues with duplicates values eliminated
+                *
+                * */
+               if(!(LList.contains(hashValue)) && wordValue[1] != null){
+                    LList.add(hashValue);
+                    sum += Integer.parseInt(wordValue[0]);
+                }
+
+            }
+
+            //We sort the list of hashValues with duplicate values eliminated
+            Collections.sort(LList);
+            ListIterator itr = LList.listIterator(0);
+            while(itr.hasNext()){
+                tmpText = itr.next().toString() +", ";
+                if(tmpText != "")
+                    newText += tmpText;
+            }
+            result.set(sum);
+            String vectorText = key+"&"+result+"&"+newText;
+            context.write(new Text(vectorText),NullWritable.get());
+        }
+    }
+    public static void main(String[] args) throws Exception{
+
+        Configuration conf = new Configuration();
+
+        Job job = new Job(conf, "Document Vector");
+
+        job.setJarByClass(DocumentVector.class);
+
+        job.setMapOutputKeyClass(Text.class);
+        job.setMapOutputValueClass(Text.class);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(NullWritable.class);
+
+        job.setMapperClass(Map.class);
+        job.setReducerClass(Reduce.class);
+
+
+
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}

@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="DocumentVector:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/DocumentVector_jar</output-path>
+    <root id="archive" name="DocumentVector.jar">
+      <element id="module-output" name="DocumentVector" />
+      <element id="extracted-dir" path="$USER_HOME$/Downloads/hadoop-core-1.2.1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="DocumentFrequencyOrdering:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/DocumentFrequencyOrdering_jar</output-path>
+    <root id="archive" name="DocumentFrequencyOrdering.jar">
+      <element id="module-output" name="DocumentFrequencyOrdering" />
+      <element id="extracted-dir" path="$USER_HOME$/Downloads/hadoop-core-1.2.1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
