@@ -62,6 +62,8 @@ public class DocumentSimilarity {
 
         Text SimilarityMeasure = new Text();
         Text VectorKey = new Text();
+	Set results = new HashSet();
+	    
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 
@@ -165,14 +167,22 @@ public class DocumentSimilarity {
                 firstVector.removeAll(firstVector);
 
             }
-            VectorKey.set(vectorSetKey.toString().trim());
-            SimilarityMeasure.set(docSim);
-            String x = VectorKey.toString().trim();
+            String x = vectorSetKey.toString().trim();
             if(!x.isEmpty()){
-                context.write(VectorKey,SimilarityMeasure);
-             }
+                vectorKey.set(x);
+                results.add(x);
+               // context.write(vectorKey,NullWritable.get());
 
+             }
         }
+	@Override
+        public void cleanup(Context context) throws IOException, InterruptedException {
+            Iterator itr = results.iterator();
+            while(itr.hasNext()){
+                String val = (String) itr.next();
+                context.write(new Text(val),NullWritable.get());
+                }
+            }  
     }
 
     public static void main(String[] args) throws Exception {
